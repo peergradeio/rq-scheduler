@@ -6,7 +6,7 @@ from datetime import datetime
 from itertools import repeat
 
 from rq.exceptions import NoSuchJobError
-from rq.job import Job
+from rq.job import Job, cancel_job
 from rq.queue import Queue
 from rq.utils import backend_class
 
@@ -245,8 +245,13 @@ class Scheduler(object):
         """
         if isinstance(job, self.job_class):
             self.connection.zrem(self.scheduled_jobs_key, job.id)
+            job.delete()
         else:
             self.connection.zrem(self.scheduled_jobs_key, job)
+            try:
+                Job.fetch(job, connection=self.connection).delete()
+            except NoSuchJobError:
+                pass
 
     def __contains__(self, item):
         """
